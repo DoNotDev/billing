@@ -1,0 +1,66 @@
+{
+  "name": "@donotdev/billing",
+  "version": "0.1.42",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "description": "Simplified Stripe billing integration for DoNotDev framework with Firebase custom claims",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "guidelines",
+    "package.json",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/donotdev/billing.git"
+  },
+  "scripts": {
+    "dev": "tsc --noEmit --watch --listFiles false --listEmittedFiles false",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "lint": "eslint src/",
+    "type-check": "bunx tsc --noEmit"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@donotdev/auth": "^0.1.42",
+    "@donotdev/components": "^0.1.42",
+    "@donotdev/core": "^0.1.42",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "stripe": "^20.3.1"
+  },
+  "peerDependenciesMeta": {},
+  "devDependencies": {
+    "@donotdev/auth": "workspace:*",
+    "@donotdev/components": "workspace:*",
+    "@donotdev/core": "workspace:*",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "stripe": "^20.3.1"
+  },
+  "keywords": [
+    "billing",
+    "subscription",
+    "stripe",
+    "payments",
+    "dndev"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  }
+}
