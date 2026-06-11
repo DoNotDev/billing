@@ -1,6 +1,6 @@
 {
   "name": "@donotdev/billing",
-  "version": "0.1.42",
+  "version": "0.1.44",
   "private": false,
   "type": "module",
   "license": "MIT",
@@ -34,9 +34,9 @@
   },
   "dependencies": {},
   "peerDependencies": {
-    "@donotdev/auth": "^0.1.42",
-    "@donotdev/components": "^0.1.42",
-    "@donotdev/core": "^0.1.42",
+    "@donotdev/auth": "^0.1.43",
+    "@donotdev/components": "^0.1.44",
+    "@donotdev/core": "^0.1.43",
     "lucide-react": "^0.575.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
