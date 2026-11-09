@@ -12,15 +12,15 @@
 import { useTranslation, type StripePayment } from '@donotdev/core';
 
 import { StripeCheckoutButton } from './StripeCheckoutButton';
-
 import type { StripeCheckoutButtonProps } from './StripeCheckoutButton';
 
 /** Props for the PurchaseButton component. */
 export interface PurchaseButtonProps extends Omit<
   StripeCheckoutButtonProps,
-  'mode' | 'priceId'
+  'mode' | 'priceId' | 'lineItems'
 > {
   configKey: string;
+  /** Front-config item. `priceId` is sent to the server; `tier`, `duration` and `metadata` are copied to the checkout metadata. */
   config: StripePayment;
 }
 

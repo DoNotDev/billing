@@ -4,7 +4,7 @@
  * @fileoverview StripeCheckoutButton component
  * @description Unified Stripe checkout button component
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  */
@@ -16,6 +16,7 @@ import {
   useTranslation,
   isDev,
   redirectToExternalUrlWithErrorHandling,
+  type CheckoutLineItemInput,
   type CheckoutMode,
 } from '@donotdev/core';
 
@@ -27,25 +28,27 @@ export interface StripeCheckoutButtonProps extends Omit<
   ButtonProps,
   'onClick' | 'children' | 'onError'
 > {
-  /** Configuration key from stripeFrontConfig (passed as billingConfigKey to backend) */
+  /** Key in the app's StripeBackConfig (sent as billingConfigKey, also in metadata). Overrides `metadata.billingConfigKey`. */
   configKey?: string;
-  /** Stripe price ID (fixed pricing mode) */
+  /** Requested lines (StripeOrder). Omitted: the server uses the single product `[{ productId: configKey, quantity: 1 }]`. */
+  lineItems?: CheckoutLineItemInput[];
+  /** Payment mode. Sent to the server; selects the default label (purchase / subscribe). Ignored for StripeOrder. */
+  mode: CheckoutMode;
+  /** Stripe price ID (fixed pricing mode). Must match the back config priceId when it has one. */
   priceId?: string;
-  /** Amount in cents (dynamic pricing mode) */
+  /** Amount in cents (dynamic pricing mode, with productName). Capped by the back config `maxUnitAmount`. */
   unitAmount?: number;
   /** Product name for Stripe checkout (dynamic pricing mode) */
   productName?: string;
-  /** Currency code, defaults to 'eur' (dynamic pricing mode) */
+  /** Currency code (dynamic pricing mode). Omitted: the back config currency. */
   currency?: string;
-  /** Payment mode */
-  mode: CheckoutMode;
   /** Success redirect URL */
   successUrl?: string;
   /** Cancel redirect URL */
   cancelUrl?: string;
   /** Additional metadata */
   metadata?: Record<string, string>;
-  /** Allow promotion codes */
+  /** Show the promotion code field (single-price items; StripeOrder uses its back config) */
   allowPromotionCodes?: boolean;
   /** Loading text */
   loadingText?: string;
@@ -58,36 +61,48 @@ export interface StripeCheckoutButtonProps extends Omit<
 /**
  * Unified Stripe checkout button component
  *
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  *
- * **Use Cases:**
- * - Direct integration when you have a Stripe price ID
- * - Custom checkout flows with full control
- * - When you need to handle both payments and subscriptions in one component
- * - Building custom billing interfaces
+ * Requires a `configKey` (key in the app's StripeBackConfig), a `priceId`, or
+ * dynamic pricing (`unitAmount` + `productName`); otherwise `onError` is called
+ * and no request is sent. With a `configKey` and no `priceId`, the server uses
+ * the back config priceId. StripeOrder items take `lineItems` and are priced on
+ * the server (priceId / unitAmount / mode are ignored for them).
  *
- * **When to use:**
- * - You have a specific Stripe price ID
- * - You want full control over the checkout process
- * - You're building custom billing pages
- * - You need to handle both one-time and recurring payments
+ * **Example (single product or subscription, priced by the back config):**
+ * ```tsx
+ * <StripeCheckoutButton configKey="lifetime" mode="payment" successUrl="/success" cancelUrl="/cancel">
+ *   Buy Now
+ * </StripeCheckoutButton>
+ * ```
  *
- * **Example:**
+ * **Example (explicit Stripe price ID):**
  * ```tsx
  * <StripeCheckoutButton
- * priceId="price_1234567890"
- * mode="payment"
- * successUrl="/success"
- * cancelUrl="/cancel"
+ *   configKey="lifetime"
+ *   priceId="price_1234567890"
+ *   mode="payment"
+ *   successUrl="/success"
+ *   cancelUrl="/cancel"
  * >
- * Buy Now - $99
+ *   Buy Now - $99
  * </StripeCheckoutButton>
+ * ```
+ *
+ * **Example (StripeOrder cart):**
+ * ```tsx
+ * <StripeCheckoutButton
+ *   configKey="shop_order"
+ *   mode="payment"
+ *   lineItems={[{ productId: 'serum-30ml', quantity: 24 }]}
+ * />
  * ```
  */
 export function StripeCheckoutButton({
   configKey,
+  lineItems,
   priceId,
   unitAmount,
   productName,
@@ -121,11 +136,12 @@ export function StripeCheckoutButton({
       : t('components.buttons.subscribe'));
 
   const handleClick = async () => {
-    // Validate: either priceId or (unitAmount + productName) required
-    if (!priceId && !(unitAmount && productName)) {
+    // Validate: a config key (server-resolved price), priceId or (unitAmount + productName) required
+    const hasConfigKey = !!(configKey || metadata.billingConfigKey);
+    if (!hasConfigKey && !priceId && !(unitAmount && productName)) {
       onError?.(
         new Error(
-          'StripeCheckoutButton: either priceId or (unitAmount + productName) required'
+          'StripeCheckoutButton: configKey, priceId or (unitAmount + productName) required'
         )
       );
       return;
@@ -135,6 +151,8 @@ export function StripeCheckoutButton({
     setIsSubmitting(true);
     try {
       const result = await checkout({
+        billingConfigKey: configKey,
+        lineItems,
         priceId,
         unitAmount,
         productName,
@@ -142,11 +160,7 @@ export function StripeCheckoutButton({
         mode,
         successUrl,
         cancelUrl,
-        metadata: {
-          ...metadata,
-          // Server values AFTER spread — cannot be overwritten by client
-          ...(configKey && { billingConfigKey: configKey }),
-        },
+        metadata,
         allowPromotionCodes,
       });
 

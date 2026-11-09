@@ -178,7 +178,7 @@ export function SubscriptionManager({
 
   return (
     <Suspense fallback={<SubscriptionFallback {...fallbackProps} />}>
-      {/* eslint-disable-next-line react/no-unstable-nested-components -- FeatureGuard requires ComponentType, binding props is intentional */}
+      {}
       <FeatureGuard
         subscription
         fallback={() => <SubscriptionFallback {...fallbackProps} />}

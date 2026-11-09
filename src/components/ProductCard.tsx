@@ -34,12 +34,13 @@ export interface ProductCardProps {
   features: string[];
   popular?: boolean;
   limitedTime?: boolean;
+  /** Selects the button: PurchaseButton (payment) or SubscriptionButton (subscription). */
   mode: CheckoutMode;
-  /** Stripe price ID (fixed pricing). Optional for dynamic pricing. */
+  /** Stripe price ID (fixed pricing). Omitted: the server uses the back config priceId of `configKey`. */
   priceId?: string;
-  /** Amount in cents (dynamic pricing). */
+  /** Not forwarded by ProductCard (unchanged since 0.1.x). For dynamic pricing use StripeCheckoutButton. */
   unitAmount?: number;
-  /** Product name for Stripe checkout (dynamic pricing). */
+  /** Not forwarded by ProductCard (unchanged since 0.1.x). For dynamic pricing use StripeCheckoutButton. */
   productName?: string;
   allowPromotionCodes?: boolean;
   metadata?: Record<string, string>;
@@ -183,6 +184,7 @@ export function ProductCard({
             metadata,
             allowPromotionCodes,
           }}
+          allowPromotionCodes={allowPromotionCodes}
           successUrl={successUrl}
           cancelUrl={cancelUrl}
           variant={popular ? 'primary' : 'outline'}

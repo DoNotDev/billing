@@ -25,7 +25,7 @@
  *
  * // Methods - framework handles overlay automatically for redirects
  * const checkout = useStripeBilling('checkout', authState);
- * await checkout({ priceId: 'price_123', mode: 'subscription' });
+ * await checkout({ billingConfigKey: 'pro_monthly' });
  * // → Shows "Redirecting to Stripe" / "Initializing secure payment..."
  *
  * const openCustomerPortal = useStripeBilling('openCustomerPortal', authState);
@@ -47,7 +47,7 @@ import type {
   AuthUser,
   BillingAPI,
   CheckoutOptions,
-  StripeCheckoutRequest,
+  CreateCheckoutSessionRequestInput,
   StripeCheckoutResponse,
   FeatureStatus,
 } from '@donotdev/core';
@@ -116,7 +116,7 @@ export interface BillingAuthState {
  *
  * // ✅ Checkout (stable, never re-renders)
  * const checkout = useStripeBilling('checkout', authState);
- * await checkout({ priceId: 'price_123', mode: 'subscription' });
+ * await checkout({ billingConfigKey: 'pro_monthly' });
  *
  * // ✅ Subscription management (stable, never re-renders)
  * const cancelSubscription = useStripeBilling('cancelSubscription', authState);
@@ -153,7 +153,7 @@ export interface BillingAuthState {
  *
  * // Get checkout method (stable, never re-renders)
  * const checkout = useStripeBilling('checkout', authState);
- * await checkout({ priceId: 'price_123', mode: 'subscription' });
+ * await checkout({ billingConfigKey: 'pro_monthly' });
  * ```
  *
  * @version 0.1.0
@@ -206,7 +206,7 @@ export function useStripeBilling<K extends keyof BillingAPI>(
 
       try {
         const { callable: createCheckoutSession } = await getCallable<
-          StripeCheckoutRequest,
+          CreateCheckoutSessionRequestInput,
           StripeCheckoutResponse
         >('createCheckoutSession');
 
@@ -219,17 +219,30 @@ export function useStripeBilling<K extends keyof BillingAPI>(
         const githubUid = githubProvider?.uid;
 
         // C1 fix: userId removed from client payload — server must use context.uid
-        const request: StripeCheckoutRequest = {
+        // 0.1.x callers pass the key in metadata
+        const billingConfigKey =
+          options.billingConfigKey ?? options.metadata?.billingConfigKey;
+        if (!billingConfigKey) {
+          throw new Error('checkout: billingConfigKey is required');
+        }
+
+        // lineItems omitted: the server uses the single product. 0.1.x pricing
+        // fields are forwarded as-is (server validates them against the back config).
+        const request: CreateCheckoutSessionRequestInput = {
+          billingConfigKey,
+          ...(options.lineItems && { lineItems: options.lineItems }),
           priceId: options.priceId,
           unitAmount: options.unitAmount,
           productName: options.productName,
           currency: options.currency,
-          userEmail: user.email || '',
-          customerEmail: user.email || '',
+          mode: options.mode,
+          ...(user.email && { customerEmail: user.email }),
           metadata: {
             ...(githubDisplayName && { githubDisplayName }), // Only add if GitHub is linked
             ...(githubUid && { githubUid }), // GitHub user ID for extra verification
             ...options.metadata,
+            // 0.1.x servers read the key from metadata only
+            billingConfigKey,
           },
           successUrl:
             options.successUrl ||
@@ -238,13 +251,14 @@ export function useStripeBilling<K extends keyof BillingAPI>(
             options.cancelUrl ||
             (typeof window !== 'undefined' ? window.location.href : ''),
           allowPromotionCodes: options.allowPromotionCodes ?? true,
-          mode: options.mode,
         };
 
         if (isDev()) {
           console.log('[useStripeBilling] calling createCheckoutSession', {
+            billingConfigKey,
             priceId: request.priceId,
             mode: request.mode,
+            lineItems: request.lineItems?.length,
           });
         }
 
@@ -286,7 +300,12 @@ export function useStripeBilling<K extends keyof BillingAPI>(
         if (!checkoutErrorNotifiedRef.current) {
           const error = handleError(err, {
             userMessage: t('errors.checkout_failed'),
-            context: { priceId: options.priceId, mode: options.mode },
+            context: {
+              billingConfigKey:
+                options.billingConfigKey ?? options.metadata?.billingConfigKey,
+              priceId: options.priceId,
+              mode: options.mode,
+            },
             severity: 'error',
           });
           setError(error.message);

@@ -1,12 +1,12 @@
 # @donotdev/billing
 
-Production-ready billing system with Stripe integration and smart idempotency.
+Production-ready billing system with Stripe integration and durable webhook idempotency.
 
 ## Features
 
 - ✅ One-time payments and subscriptions
 - ✅ Automatic webhook processing
-- ✅ Smart idempotency (auto-detects Firestore)
+- ✅ Durable webhook idempotency (Firestore or Postgres)
 - ✅ Customizable hooks for business logic
 - ✅ React components and templates
 - ✅ Zero configuration required
@@ -83,7 +83,6 @@ export const stripeFrontConfig: StripeFrontConfig = {
       'Downloadable resources',
       'Community support',
     ],
-    allowPromotionCodes: true,
   },
   pro_monthly: {
     name: 'Pro Plan',
@@ -97,7 +96,6 @@ export const stripeFrontConfig: StripeFrontConfig = {
       'Advanced analytics',
       'Custom integrations',
     ],
-    allowPromotionCodes: true,
   },
 };
 ```
@@ -176,93 +174,25 @@ firebase deploy --only functions
 
 ## Idempotency
 
-The framework **automatically prevents duplicate webhook processing** using smart idempotency.
+Every webhook entry point stores processed Stripe events durably, so a redelivered event never runs your hooks twice in a row:
 
-### How It Works
+- **Firebase:** Firestore collection `webhook_idempotency`
+- **Supabase:** table `webhook_events` (migration `20250101000005_webhook_events.sql`)
+- **Vercel:** the store of the `backend` you pass
 
-The framework detects your environment and chooses the best storage:
+Delivery is **at least once**: a hook that throws makes the webhook answer non-2xx so Stripe retries, and a hook can run again if the event could not be recorded after it succeeded. Write hooks so a second run is a no-op (key on `orderId` / `ctx.eventId`, or check the state you are about to set).
 
-- ✅ **Firestore enabled** → Uses Firestore (production-ready, scales to millions)
-- ⚠️ **Firestore not enabled** → Uses in-memory (works for development, limited for production)
-
-**Zero configuration required** - it just works.
-
-### When to Enable Firestore
-
-We recommend enabling Firestore when you have:
-
-- 📈 **> 100 transactions per day**
-- 🚀 **Multiple function instances** (auto-scaling)
-- 💰 **Revenue-critical operations** (prevent duplicates)
-
-### How to Enable Firestore
-
-If you don't have Firestore yet:
-
-1. **Enable Firestore** (one-time, 2 minutes)
-   - Go to [Firebase Console](https://console.firebase.google.com)
-   - Click **Firestore Database** → **Create database**
-   - Choose your location (e.g., `europe-west1`)
-   - Select **Start in production mode**
-   - Click **Enable**
-
-2. **Add Security Rules** (copy-paste, 1 minute)
-
-   Add to `firestore.rules`:
-
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       // Webhook idempotency - Functions only
-       match /webhook_idempotency/{document=**} {
-         allow read, write: if false;
-       }
-     }
-   }
-   ```
-
-3. **Deploy Rules**
-
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
-
-4. **Redeploy Functions** (automatic upgrade)
-   ```bash
-   firebase deploy --only functions
-   ```
-
-**Done!** Framework automatically detects Firestore and upgrades to production-ready idempotency.
-
-### Cost
-
-Firestore costs are minimal for billing:
-
-| Transactions/Month | Firestore Cost |
-| ------------------ | -------------- |
-| 100                | < $0.01        |
-| 1,000              | ~$0.50         |
-| 10,000             | ~$2            |
-| 100,000            | ~$10           |
-
-Much cheaper than alternatives (Stripe Billing: $10/mo minimum, Chargebee: $249/mo minimum).
-
-### Health Check
-
-Check your idempotency status:
+Processed events are kept 30 days (Stripe resends events up to 30 days old). Supabase prunes them with a daily pg_cron job. On Firebase, enable the TTL policy once:
 
 ```bash
-curl https://YOUR-REGION-YOUR-PROJECT.cloudfunctions.net/billingHealth
+gcloud firestore fields ttls update expiresAt --collection-group=webhook_idempotency --enable-ttl --project=<PROJECT_ID>
 ```
 
-Response:
+Firestore rules: keep the collection server-only.
 
-```json
-{
-  "status": "healthy",
-  "timestamp": 1234567890,
-  "idempotency": "firestore" // or "in-memory"
+```javascript
+match /webhook_idempotency/{document=**} {
+  allow read, write: if false;
 }
 ```
 
@@ -565,14 +495,10 @@ stripe trigger checkout.session.completed
 
 ### Test Idempotency
 
-Send the same webhook twice:
+Resend an event that was already delivered (`stripe trigger` creates a new event each time):
 
 ```bash
-# First time - processes successfully
-stripe trigger checkout.session.completed
-
-# Second time - logs "Already processed"
-stripe trigger checkout.session.completed
+stripe events resend evt_...   # logs "Already processed"
 ```
 
 ---
@@ -590,7 +516,7 @@ Stripe sends webhook to your endpoint
   ↓
 Framework processes webhook:
   ├─ Verifies signature ✅
-  ├─ Checks idempotency (Firestore or in-memory) ✅
+  ├─ Reserves the event (Firestore or Postgres) ✅
   ├─ Updates user subscription (customClaims) ✅
   ├─ Calls your custom hooks ✅
   └─ Marks event as processed ✅
@@ -601,16 +527,6 @@ User has access ✅
 ---
 
 ## Troubleshooting
-
-### "Firestore not configured, using in-memory"
-
-**This is normal** for development. Framework works immediately with in-memory storage.
-
-**To upgrade to production:**
-
-1. Enable Firestore (see above)
-2. Redeploy functions
-3. Framework auto-detects and upgrades
 
 ### "Webhook signature verification failed"
 
@@ -668,18 +584,31 @@ onPurchaseSuccess: async (userId, metadata) => {
 };
 ```
 
-### Manual Idempotency Check
+### Idempotency Store
+
+Webhook entry points wire the durable store of their backend. Custom handlers use the same contract:
 
 ```typescript
-import { createIdempotencyStore } from '@donotdev/functions/firebase/billing';
+import { createFirestoreIdempotencyStore } from '@donotdev/functions/firebase';
+// Supabase: createSupabaseIdempotencyStore(supabaseAdmin) from '@donotdev/functions/supabase'
 
-const store = createIdempotencyStore();
+const store = createFirestoreIdempotencyStore();
+const reservation = await store.reserve('evt_123');
 
-// Check if processed
-const processed = await store.isProcessed('evt_123');
-
-// Mark as processed
-await store.markProcessed('evt_123');
+if (reservation.state === 'in_progress') {
+  // Another delivery is running it: answer non-2xx so Stripe retries later
+  throw new Error('Event in progress');
+}
+if (reservation.state === 'reserved') {
+  try {
+    await handle(); // must be idempotent: it can run again
+  } catch (error) {
+    await store.release('evt_123', reservation.ownerToken); // let the retry run
+    throw error;
+  }
+  await store.markProcessed('evt_123', reservation.ownerToken);
+}
+// state 'processed': already handled, answer 2xx
 ```
 
 ---
