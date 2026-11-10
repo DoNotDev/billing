@@ -232,8 +232,6 @@ export function useStripeBilling<K extends keyof BillingAPI>(
           billingConfigKey,
           ...(options.lineItems && { lineItems: options.lineItems }),
           priceId: options.priceId,
-          unitAmount: options.unitAmount,
-          productName: options.productName,
           currency: options.currency,
           mode: options.mode,
           ...(user.email && { customerEmail: user.email }),

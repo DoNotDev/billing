@@ -18,7 +18,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx  # From 'stripe listen' or Stripe Dashboard -> W
 
 **Stripe Dashboard:** Create products, copy Price IDs (`price_...`). StripeOrder items need no Stripe products: lines are priced by the app.
 
-**Request shape:** the client sends `billingConfigKey` (StripeOrder adds `lineItems: [{ productId, quantity }]`). The user always comes from the auth context. Single-price items (StripePayment / StripeSubscription) also accept the 0.1.x fields: `priceId` (must match the back config `priceId` when it has one; defaults to it), dynamic pricing `unitAmount` + `productName` (capped by the back config `maxUnitAmount`, not for subscriptions) and `mode` (defaults to the item type). 0.1.x calls (`checkout({ priceId, mode, metadata: { billingConfigKey } })`) work unchanged.
+**Request shape:** the client sends `billingConfigKey` (StripeOrder adds `lineItems: [{ productId, quantity }]`). The user always comes from the auth context. Single-price items (StripePayment / StripeSubscription) also accept the 0.1.x fields: `priceId` (must match the back config `priceId` when it has one; defaults to it) and `mode` (defaults to the item type). 0.1.x calls (`checkout({ priceId, mode, metadata: { billingConfigKey } })`) work unchanged.
 
 ---
 
@@ -80,7 +80,7 @@ export const stripeBackConfig: StripeBackConfig = {
     name: 'Pro',
     price: 2900, // In cents
     currency: 'EUR',
-    priceId: process.env.STRIPE_PRICE_PRO_PLAN!, // charged price (or set maxUnitAmount for client dynamic pricing)
+    priceId: process.env.STRIPE_PRICE_PRO_PLAN!, // charged price
     tier: 'pro',
     duration: '1month',
     onSubscriptionCreated: async (userId, metadata) => { /* Grant features */ },

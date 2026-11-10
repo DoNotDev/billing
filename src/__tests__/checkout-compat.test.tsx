@@ -82,34 +82,12 @@ describe('checkout buttons: 0.1.x compatibility', () => {
       billingConfigKey: 'lifetime',
       lineItems: undefined,
       priceId: 'price_123',
-      unitAmount: undefined,
-      productName: undefined,
       currency: undefined,
       mode: 'payment',
       successUrl: 'https://app.test/ok',
       cancelUrl: 'https://app.test/ko',
       metadata: { source: 'pricing' },
       allowPromotionCodes: false,
-    });
-  });
-
-  it('StripeCheckoutButton forwards 0.1.x dynamic pricing with metadata.billingConfigKey', async () => {
-    await click(
-      <StripeCheckoutButton
-        unitAmount={2500}
-        productName="Credits"
-        currency="usd"
-        mode="payment"
-        metadata={{ billingConfigKey: 'credits' }}
-      />
-    );
-    expect(lastOptions()).toMatchObject({
-      billingConfigKey: undefined,
-      unitAmount: 2500,
-      productName: 'Credits',
-      currency: 'usd',
-      mode: 'payment',
-      metadata: { billingConfigKey: 'credits' },
     });
   });
 

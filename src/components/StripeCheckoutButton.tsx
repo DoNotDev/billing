@@ -36,10 +36,6 @@ export interface StripeCheckoutButtonProps extends Omit<
   mode: CheckoutMode;
   /** Stripe price ID (fixed pricing mode). Must match the back config priceId when it has one. */
   priceId?: string;
-  /** Amount in cents (dynamic pricing mode, with productName). Capped by the back config `maxUnitAmount`. */
-  unitAmount?: number;
-  /** Product name for Stripe checkout (dynamic pricing mode) */
-  productName?: string;
   /** Currency code (dynamic pricing mode). Omitted: the back config currency. */
   currency?: string;
   /** Success redirect URL */
@@ -65,11 +61,10 @@ export interface StripeCheckoutButtonProps extends Omit<
  * @since 0.0.1
  * @author AMBROISE PARK Consulting
  *
- * Requires a `configKey` (key in the app's StripeBackConfig), a `priceId`, or
- * dynamic pricing (`unitAmount` + `productName`); otherwise `onError` is called
+ * Requires a `configKey` (key in the app's StripeBackConfig) or a `priceId`; otherwise `onError` is called
  * and no request is sent. With a `configKey` and no `priceId`, the server uses
  * the back config priceId. StripeOrder items take `lineItems` and are priced on
- * the server (priceId / unitAmount / mode are ignored for them).
+ * the server (priceId / mode are ignored for them).
  *
  * **Example (single product or subscription, priced by the back config):**
  * ```tsx
@@ -104,8 +99,6 @@ export function StripeCheckoutButton({
   configKey,
   lineItems,
   priceId,
-  unitAmount,
-  productName,
   currency,
   mode,
   successUrl,
@@ -136,12 +129,12 @@ export function StripeCheckoutButton({
       : t('components.buttons.subscribe'));
 
   const handleClick = async () => {
-    // Validate: a config key (server-resolved price), priceId or (unitAmount + productName) required
+    // Validate: a config key (server-resolved price) or priceId required
     const hasConfigKey = !!(configKey || metadata.billingConfigKey);
-    if (!hasConfigKey && !priceId && !(unitAmount && productName)) {
+    if (!hasConfigKey && !priceId) {
       onError?.(
         new Error(
-          'StripeCheckoutButton: configKey, priceId or (unitAmount + productName) required'
+          'StripeCheckoutButton: configKey or priceId required'
         )
       );
       return;
@@ -154,8 +147,6 @@ export function StripeCheckoutButton({
         billingConfigKey: configKey,
         lineItems,
         priceId,
-        unitAmount,
-        productName,
         currency,
         mode,
         successUrl,

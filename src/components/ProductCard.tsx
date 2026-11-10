@@ -38,10 +38,6 @@ export interface ProductCardProps {
   mode: CheckoutMode;
   /** Stripe price ID (fixed pricing). Omitted: the server uses the back config priceId of `configKey`. */
   priceId?: string;
-  /** Not forwarded by ProductCard (unchanged since 0.1.x). For dynamic pricing use StripeCheckoutButton. */
-  unitAmount?: number;
-  /** Not forwarded by ProductCard (unchanged since 0.1.x). For dynamic pricing use StripeCheckoutButton. */
-  productName?: string;
   allowPromotionCodes?: boolean;
   metadata?: Record<string, string>;
   successUrl?: string;
