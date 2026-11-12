@@ -13,6 +13,7 @@
 import { AlertCircle, CreditCard, AlertTriangle } from 'lucide-react';
 import React, { useState, lazy, Suspense, type ComponentType } from 'react';
 
+import type { FeatureGuardProps } from '@donotdev/auth';
 import {
   Card,
   Button,
@@ -28,13 +29,13 @@ import { useStripeBilling } from '../useStripeBilling';
 
 // Lazy load @donotdev/auth - package is optional
 
-type AnyComponent = ComponentType<any>; // @donotdev/auth is an optional peer — its prop types are unavailable at compile time
-const NullComponent: AnyComponent = () => null;
+type GuardComponent = ComponentType<FeatureGuardProps>;
+const NullComponent: GuardComponent = () => null;
 
-const FeatureGuard = lazy<AnyComponent>(async () => {
+const FeatureGuard = lazy<GuardComponent>(async () => {
   try {
     const module = await import('@donotdev/auth');
-    return { default: module.FeatureGuard as AnyComponent }; // FeatureGuard props vary by @donotdev/auth version; cast required for optional dep
+    return { default: module.FeatureGuard };
   } catch {
     return { default: NullComponent };
   }

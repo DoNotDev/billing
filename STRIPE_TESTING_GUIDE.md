@@ -28,21 +28,21 @@
 
 ```bash
 # Run unit tests
-bun test
+dn test
 
 # Run specific test files
-bun test webhookHandler.test.ts
-bun test PurchaseButton.test.tsx
+bunx vitest run webhookHandler.test.ts
+bunx vitest run PurchaseButton.test.tsx
 ```
 
 ### 🧪 **2. Integration Tests**
 
 ```bash
 # Run integration tests
-bun test billingIntegration.test.ts
+bunx vitest run billingIntegration.test.ts
 
 # Test billing config validation
-bun test -- --grep "billing config"
+bunx vitest run -t "billing config"
 ```
 
 ### 🧪 **3. End-to-End Tests**
