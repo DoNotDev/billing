@@ -8,7 +8,7 @@
 
 1. Go to https://dashboard.stripe.com/apikeys
 2. Copy your **Publishable key** (`pk_test_...`) -> `.env`
-3. Copy your **Secret key** (`<stripe_secret_key>`) -> `supabase/functions/.env` or `functions/.env`
+3. Copy your **Secret key** (`<stripe_secret_key>`) -> `.dndev.secrets` at the project root (Firebase) or `supabase/functions/.env` (Supabase)
 
 > **Security:** Never commit secret keys. Stripe also supports restricted keys (`rk_test_...`, `rk_live_...`) for tighter permissions.
 
@@ -61,7 +61,7 @@ The response's `secret` (`whsec_...`) is the signing secret -> `STRIPE_WEBHOOK_S
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
-### Functions `.env` (secret)
+### Functions secrets (`.dndev.secrets` for Firebase, `supabase/functions/.env` for Supabase)
 ```
 STRIPE_SECRET_KEY=<stripe_secret_key>
 STRIPE_WEBHOOK_SECRET=whsec_...
