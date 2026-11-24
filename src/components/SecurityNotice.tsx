@@ -117,7 +117,7 @@ export function SecurityNotice({
                   color: 'var(--foreground)',
                 }}
               >
-                {t('security.title', 'Secure Payment Processing')}
+                {t('security.title')}
               </h3>
               <div
                 style={{
@@ -127,10 +127,7 @@ export function SecurityNotice({
                 }}
               >
                 <p style={{ marginBottom: 'var(--gap-md)' }}>
-                  {t(
-                    'security.description',
-                    'Your payment information is processed securely by Stripe, a PCI DSS Level 1 certified payment processor.'
-                  )}
+                  {t('security.description')}
                 </p>
                 <Stack
                   direction="row"
@@ -140,13 +137,11 @@ export function SecurityNotice({
                 >
                   <Stack direction="row" align="center" gap="tight">
                     <Lock className="dndev-size-md" />
-                    <span>
-                      {t('security.encrypted', '256-bit SSL encryption')}
-                    </span>
+                    <span>{t('security.encrypted')}</span>
                   </Stack>
                   <Stack direction="row" align="center" gap="tight">
                     <CreditCard className="dndev-size-md" />
-                    <span>{t('security.stripe', 'Powered by Stripe')}</span>
+                    <span>{t('security.stripe')}</span>
                   </Stack>
                 </Stack>
               </div>
@@ -157,7 +152,7 @@ export function SecurityNotice({
               variant={BUTTON_VARIANT.GHOST}
               onClick={handleDismiss}
               className="dndev-flex-shrink-0 dndev-size-touch"
-              aria-label={t('security.dismiss', 'Dismiss security notice')}
+              aria-label={t('security.dismiss')}
             >
               <X className="dndev-size-md" />
             </Button>
